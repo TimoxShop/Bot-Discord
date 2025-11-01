@@ -752,6 +752,19 @@ async function registerCommands() {
         },
       ],
     },
+    {
+      name: "setup_channel_rapport_temporaire",
+      description: "Configurer un salon avec bouton pour les rapports temporaires",
+      options: [
+        {
+          name: "channel",
+          description: "Salon où envoyer l'embed avec le bouton",
+          type: 7,
+          required: true,
+          channel_types: [0],
+        }
+      ]
+    },
   ];
 
   try {
@@ -994,22 +1007,11 @@ async function handleCommand(interaction) {
 
         await interaction.reply({ embeds: [embed] });
       } else if (subcommand === "liste") {
-        const page = options.getInteger("page") || 1;
-        // Comportement spécial : si page === 1, on envoie toute la liste 1-99 sur la page 1
-        let start, end, totalPages;
-        if (page === 1) {
-          start = 1;
-          end = 99;
-          totalPages = 1;
-        } else {
-          const perPage = 33;
-          start = (page - 1) * perPage + 1;
-          end = Math.min(page * perPage, 99);
-          totalPages = Math.ceil(99 / perPage);
-        }
+        const start = 1;
+        const end = 99;
 
         const embed = new EmbedBuilder()
-          .setTitle(`📋 Liste des Agents (Partie ${page}/${totalPages})`)
+          .setTitle(`📋 Liste des Agents`)
           .setColor(0x3498db)
           .setThumbnail(database.config.embedImage);
 
@@ -1027,10 +1029,8 @@ async function handleCommand(interaction) {
 
         embed.setDescription(description);
         embed.setFooter({
-          text: `Utilisez /agents liste page:${page} pour changer de page`,
         });
 
-        // Envoi uniquement de l'embed (pas de message textuel supplémentaire)
         await interaction.reply({ embeds: [embed] });
       }
     } else if (commandName === "rapport") {
@@ -1655,51 +1655,14 @@ async function handleCommand(interaction) {
       }
     }
   } catch (error) {
-    console.error("Erreur lors du traitement du bouton:", error);
-    await interaction
-      .reply({ content: "❌ Une erreur est survenue", ephemeral: true })
-      .catch(() => {});
+    console.error("Erreur lors du traitement de la commande:", error);
+    await interaction.reply({ 
+      content: "❌ Une erreur est survenue", 
+      ephemeral: true 
+    }).catch(() => {});
   }
 }
 
-/* Nouveauté: compter les membres en service et mettre la présence du bot */
-async function getServiceCount() {
-  const voiceIds = Array.isArray(database.config.serviceVoiceChannels)
-    ? database.config.serviceVoiceChannels
-    : [];
-  let total = 0;
-
-  for (const id of voiceIds) {
-    try {
-      const channel = await client.channels.fetch(id).catch(() => null);
-      if (!channel || !channel.members) continue;
-      // compter uniquement les utilisateurs (pas les bots)
-      total += channel.members.filter((m) => !m.user.bot).size;
-    } catch (err) {
-      // ignore fetch errors pour un channel invalide
-    }
-  }
-
-  return total;
-}
-
-async function updatePresence() {
-  try {
-    if (!client.user) return;
-    const count = await getServiceCount();
-    // Utiliser le singulier/pluriel correct en français
-    const activityName =
-      count === 1 ? `1 agent en service` : `${count} agents en service`;
-    await client.user.setPresence({
-      activities: [{ name: activityName, type: 3 }],
-      status: "online",
-    });
-  } catch (err) {
-    console.error("Erreur lors de la mise a jour de la presence:", err);
-  }
-}
-
-// Nouveau : gestionnaire pour les interactions de type bouton
 async function handleButton(interaction) {
   try {
     const id = interaction.customId || "";
@@ -1778,149 +1741,51 @@ async function handleButton(interaction) {
       });
     }
 
-    // Approve / Reject buttons (IDs : approve_absence_<id> / reject_absence_<id>)
-    if (id.startsWith("approve_absence_")) {
-      const absenceId = id.replace("approve_absence_", "");
-      const absence = database.absences.find((a) => a.id === absenceId);
-      if (!absence)
+    if (id === "voir_rapport_temporaire") {
+      const targetUser = interaction.user;
+      if (!database.agents[targetUser.id]) {
         return interaction.reply({
-          content: "❌ Absence introuvable",
+          content: "❌ Vous n'êtes pas enregistré comme agent",
           ephemeral: true,
         });
-
-      absence.status = "approved";
-      absence.approvedBy = interaction.user.id;
-      absence.approvedAt = Date.now();
-      saveDatabase();
-
-      if (database.config.absenceRole) {
-        const member = await interaction.guild.members
-          .fetch(absence.userId)
-          .catch(() => null);
-        if (member)
-          await member.roles.add(database.config.absenceRole).catch(() => {});
       }
 
-      await interaction
-        .update({ content: "✅ Absence approuvee", components: [] })
-        .catch(() => {});
+      const agent = database.agents[targetUser.id];
+      const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+      const grade = member ? getMemberGrade(member) : "Agent";
+      const stats = calculateSalary(agent, member);
 
-      const agent = database.agents[absence.userId];
-      if (agent && agent.dossierChannelId) {
-        const dossierChannel = await client.channels
-          .fetch(agent.dossierChannelId)
-          .catch(() => null);
-        const member = await interaction.guild.members
-          .fetch(absence.userId)
-          .catch(() => null);
-        if (dossierChannel && member) {
-          const grade = getMemberGrade(member);
-          const startParts = absence.startDate.split("/");
-          const endParts = absence.endDate.split("/");
-          const start = new Date(
-            startParts[2],
-            startParts[1] - 1,
-            startParts[0],
-          );
-          const end = new Date(endParts[2], endParts[1] - 1, endParts[0]);
-          const durationDays =
-            Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      const rewardsText = agent.rewardsAndSanctions
+        ?.filter((r) => r.type === "reward")
+        .map((r) => `🏅 ${r.description}`)
+        .join("\n") || "";
+      const sanctionsText = agent.rewardsAndSanctions
+        ?.filter((r) => r.type === "sanction")
+        .map((r) => `⚠️ ${r.description}`)
+        .join("\n") || "";
+      const rewardSanctionText = (rewardsText + (sanctionsText ? "\n" + sanctionsText : "")) || 
+        "Aucune récompense ou sanction enregistrée.";
 
-          const embed = new EmbedBuilder()
-            .setTitle("📝 Nouvelle demande d'absence")
-            .setColor(0x00ff00)
-            .addFields(
-              {
-                name: "👤 Agent",
-                value: `[${grade} ${agent.matricule}] ${agent.username} (<@${absence.userId}>)\nID : ${agent.uniqueId}`,
-                inline: false,
-              },
-              {
-                name: "🆔 Matricule",
-                value: `${agent.matricule}`,
-                inline: true,
-              },
-              {
-                name: "📁 Dossier",
-                value: `<#${agent.dossierChannelId}>`,
-                inline: true,
-              },
-              {
-                name: "📅 Periode",
-                value: `${absence.startDate} → ${absence.endDate}`,
-                inline: false,
-              },
-              {
-                name: "⏳ Duree",
-                value: `${durationDays} jours`,
-                inline: true,
-              },
-              { name: "📝 Raison", value: absence.reason, inline: false },
-              {
-                name: "🕐 Soumise le",
-                value: new Date(absence.submittedAt).toLocaleString("fr-FR"),
-                inline: false,
-              },
-              {
-                name: "Statut",
-                value: `✅ Validee par <@${interaction.user.id}>`,
-                inline: false,
-              },
-            )
-            .setFooter({ text: `Demande d'absence #${absenceId.slice(-6)}` })
-            .setTimestamp();
+      const embed = new EmbedBuilder()
+        .setTitle("📊 Rapport temporaire")
+        .setColor(0x3498db)
+        .setThumbnail(database.config.embedImage)
+        .addFields(
+          { name: "📛 Nom :", value: `${agent.username} (${targetUser})`, inline: false },
+          { name: "────────────────────────────────────────────────", value: "\u200B", inline: false },
+          { name: "👮 Grade :", value: grade, inline: true },
+          { name: "⏱️ Heures de service :", value: `${stats.totalHours}h ${stats.totalMinutes}m`, inline: true },
+          { name: "📅 Prises de service :", value: `${stats.serviceCount}`, inline: true },
+          { name: "💰 Salaire Fixe :", value: `${stats.fixedSalary.toLocaleString("fr-FR")} $`, inline: true },
+          { name: "💵 Salaire Heure de Service :", value: `${stats.salaryPerService.toLocaleString("fr-FR")} $`, inline: true },
+          { name: "💸 Salaire total :", value: `${stats.totalSalary.toLocaleString("fr-FR")} $`, inline: true },
+          { name: "🏅 Medailles & Sanctions :", value: rewardSanctionText, inline: false }
+        )
+        .setFooter({ text: "Police Manager" })
+        .setTimestamp();
 
-          await dossierChannel.send({ embeds: [embed] }).catch(() => {});
-        }
-      }
-      return;
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
-
-    if (id.startsWith("reject_absence_")) {
-      const absenceId = id.replace("reject_absence_", "");
-      const absence = database.absences.find((a) => a.id === absenceId);
-      if (!absence)
-        return interaction.reply({
-          content: "❌ Absence introuvable",
-          ephemeral: true,
-        });
-
-      absence.status = "rejected";
-      absence.rejectedBy = interaction.user.id;
-      absence.rejectedAt = Date.now();
-      saveDatabase();
-
-      await interaction
-        .update({ content: "❌ Absence refusee", components: [] })
-        .catch(() => {});
-
-      const agent = database.agents[absence.userId];
-      if (agent && agent.dossierChannelId) {
-        const dossierChannel = await client.channels
-          .fetch(agent.dossierChannelId)
-          .catch(() => null);
-        if (dossierChannel) {
-          const embed = new EmbedBuilder()
-            .setTitle("❌ Absence Refusee")
-            .setColor(0xff0000)
-            .addFields(
-              { name: "Date de debut", value: absence.startDate },
-              { name: "Date de fin", value: absence.endDate },
-              { name: "Raison", value: absence.reason },
-              { name: "Refusee par", value: `<@${interaction.user.id}>` },
-            )
-            .setTimestamp();
-          await dossierChannel.send({ embeds: [embed] }).catch(() => {});
-        }
-      }
-      return;
-    }
-
-    // Si bouton non géré
-    return interaction.reply({
-      content: "Action non prise en charge.",
-      ephemeral: true,
-    });
   } catch (error) {
     console.error("Erreur lors du traitement du bouton:", error);
     await interaction
