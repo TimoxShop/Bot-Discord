@@ -19,12 +19,47 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("🚔 Bot Police Manager est en ligne !");
+  res.send("🚓 Bot Police Manager est en ligne !");
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Serveur web demarre sur le port ${PORT}`);
 });
+
+// Auto-ping pour garder le bot actif
+function keepAlive() {
+  const http = require('http');
+  
+  setInterval(() => {
+    const options = {
+      hostname: 'localhost',
+      port: PORT,
+      path: '/',
+      method: 'GET',
+      timeout: 5000
+    };
+    
+    const req = http.request(options, (res) => {
+      console.log(`✅ Keep-alive ping: ${res.statusCode}`);
+    });
+    
+    req.on('error', (error) => {
+      console.error('❌ Keep-alive error:', error.message);
+    });
+    
+    req.setTimeout(5000, () => {
+      req.destroy();
+    });
+    
+    req.end();
+  }, 5 * 60 * 1000); // Toutes les 5 minutes
+}
+
+// Démarrer le keep-alive après 30 secondes
+setTimeout(() => {
+  keepAlive();
+  console.log('🔄 Système keep-alive activé');
+}, 30000);
 
 const client = new Client({
   intents: [
