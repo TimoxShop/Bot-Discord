@@ -1,0 +1,16 @@
+{
+  "name": "bot-police-manager",
+  "version": "1.0.0",
+  "description": "Bot Discord de gestion de police avec système de service, absences, salaires et rapports",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "keywords": ["discord", "bot", "police", "manager"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.18.2"
+  }
+}
