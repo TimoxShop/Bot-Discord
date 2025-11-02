@@ -198,6 +198,24 @@ client.once("ready", () => {
   setInterval(() => updatePresence().catch(() => {}), 60 * 1000);
 });
 
+// --- Ajout: fonction updatePresence pour éviter erreurs au démarrage ---
+async function updatePresence() {
+  try {
+    if (!client.user) return;
+    const totalAgents = Object.keys(database.agents || {}).length || 0;
+    const serviceCount = Object.values(database.services || {}).reduce((acc, arr) => {
+      return acc + (arr.filter(s => !s.endTime).length || 0);
+    }, 0);
+    const name = `${serviceCount} en service • ${totalAgents} agents`;
+    await client.user.setPresence({
+      activities: [{ name }],
+      status: "online",
+    });
+  } catch (err) {
+    console.error("Erreur updatePresence:", err);
+  }
+}
+
 async function registerCommands() {
   const commands = [
     {
@@ -585,43 +603,6 @@ async function registerCommands() {
         {
           name: "set-grades-1-5",
           description: "Définir les grades 1 à 5 (du plus haut au plus bas)",
-          type: 1,
-          options: [
-            {
-              name: "grade1",
-              description: "Grade le plus haut",
-              type: 8,
-              required: true,
-            },
-            {
-              name: "grade2",
-              description: "2ème grade",
-              type: 8,
-              required: false,
-            },
-            {
-              name: "grade3",
-              description: "3ème grade",
-              type: 8,
-              required: false,
-            },
-            {
-              name: "grade4",
-              description: "4ème grade",
-              type: 8,
-              required: false,
-            },
-            {
-              name: "grade5",
-              description: "5ème grade",
-              type: 8,
-              required: false,
-            },
-          ],
-        },
-{
-          name: "set-grades-1-5",
-          description: "Grades 1-5",
           type: 1,
           options: [
             { name: "grade1", description: "Grade 1", type: 8, required: true },
@@ -1722,19 +1703,8 @@ async function handleCommand(interaction) {
       }
     }
 
-    // Modifier la commande d'ajout d'agent pour whitelist le salon
-    if (commandName === "agents" && options.getSubcommand() === "ajouter") {
-      const dossierChannel = options.getChannel("dossier_channel");
-      // ...existing code for agent adding...
-
-      // Ajouter automatiquement le salon à la whitelist
-      if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
-      if (!database.config.whitelistChannels.includes(dossierChannel.id)) {
-        database.config.whitelistChannels.push(dossierChannel.id);
-        saveDatabase();
-      }
-      // ...rest of existing agent adding code...
-    }
+    // --- SUPPRIMÉ: bloc redondant qui dupliquait l'ajout de dossierChannel à whitelist ---
+    // (la logique d'ajout à la whitelist est déjà effectuée dans agents -> ajouter)
     // ...existing code...
   } catch (error) {
     console.error("Erreur lors du traitement de la commande:", error);
@@ -1748,6 +1718,41 @@ async function handleCommand(interaction) {
 async function handleButton(interaction) {
   try {
     const id = interaction.customId || "";
+
+    // --- Ajout: gestion approve/reject pour les absences envoyées dans le canal de confirmation ---
+    if (id.startsWith("approve_absence_") || id.startsWith("reject_absence_")) {
+      // Autoriser seulement les personnes ayant MANAGE_MESSAGES ou le créateur du message? ici simple: vérifier permission MANAGE_MESSAGES
+      const isApprove = id.startsWith("approve_absence_");
+      const absenceId = id.split("_").slice(2).join("_");
+      const absence = database.absences.find(a => a.id === absenceId);
+      if (!absence) {
+        return interaction.reply({ content: "❌ Absence introuvable.", ephemeral: true });
+      }
+
+      // Vérifier permission : gérer les absences (MANAGE_GUILD ou MANAGE_MESSAGES)
+      const member = interaction.member;
+      if (!member.permissions.has?.(PermissionFlagsBits.ManageMessages) && !member.permissions.has?.(PermissionFlagsBits.ManageGuild)) {
+        return interaction.reply({ content: "❌ Vous n'avez pas la permission de valider/refuser.", ephemeral: true });
+      }
+
+      absence.status = isApprove ? "approved" : "rejected";
+      saveDatabase();
+
+      // Répondre et essayer d'éditer le message pour refléter le statut si possible
+      try {
+        await interaction.reply({ content: `✅ Demande ${isApprove ? "confirmée" : "refusée"} (#${absenceId.slice(-6)}).`, ephemeral: true });
+      } catch (e) {}
+
+      // Optionnel: notifier l'auteur
+      try {
+        const user = await client.users.fetch(absence.userId).catch(() => null);
+        if (user) {
+          await user.send(`Votre demande d'absence #${absenceId.slice(-6)} a été ${isApprove ? "confirmée" : "refusée"}.`).catch(() => {});
+        }
+      } catch (e) {}
+
+      return;
+    }
 
     if (id === "abs_fill_form") {
       // Construire et afficher le modal d'absence
