@@ -95,6 +95,7 @@ let database = {
     protectionPingRole: null,
     transcriptChannel: null, // Nouveau: salon où seront envoyés les transcripts des agents
     whitelistDomains: [],
+    whitelistChannels: [], // Nouveau : stocke les IDs des salons whitelistés
     gradeOrder: null,
   },
 };
@@ -755,6 +756,45 @@ async function registerCommands() {
         }
       ]
     },
+    {
+      name: "channel_whitelist",
+      description: "Gérer la whitelist des salons pour les liens",
+      options: [
+        {
+          name: "add",
+          description: "Ajouter un salon à la whitelist",
+          type: 1,
+          options: [
+            {
+              name: "channel",
+              description: "Salon à whitelister",
+              type: 7,
+              required: true,
+              channel_types: [0],
+            },
+          ],
+        },
+        {
+          name: "remove",
+          description: "Retirer un salon de la whitelist",
+          type: 1,
+          options: [
+            {
+              name: "channel",
+              description: "Salon à retirer",
+              type: 7,
+              required: true,
+              channel_types: [0],
+            },
+          ],
+        },
+        {
+          name: "list",
+          description: "Voir la liste des salons whitelistés",
+          type: 1,
+        },
+      ],
+    },
   ];
 
   try {
@@ -985,6 +1025,13 @@ async function handleCommand(interaction) {
           }
         } catch (e) {
           console.error("Erreur en envoyant le transcript automatique:", e);
+        }
+
+        // Ajouter automatiquement le salon à la whitelist
+        if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
+        if (!database.config.whitelistChannels.includes(dossierChannel.id)) {
+          database.config.whitelistChannels.push(dossierChannel.id);
+          saveDatabase();
         }
 
         return;
@@ -1556,116 +1603,78 @@ async function handleCommand(interaction) {
           ephemeral: true,
         });
       }
-    }
-
-    // Gestion de la configuration de l'image d'embed + grades
-    else if (
-      commandName === "config" ||
-      commandName === "set-image" ||
-      commandName === "set_image" ||
-      commandName === "set-grades" ||
-      commandName === "set_grades"
-    ) {
-      try {
-        // Cas: /config <subcommand>
-        if (commandName === "config") {
-          const sub = options.getSubcommand();
-          if (sub === "set-image") {
-            const url = options.getString("url");
-            if (!url)
-              return interaction.reply({
-                content: "❌ URL manquante",
-                ephemeral: true,
-              });
-            database.config.embedImage = url;
-            saveDatabase();
-            return interaction.reply({
-              content: "✅ Image des embeds mise a jour.",
-              ephemeral: true,
-            });
-          }
-
-          if (sub === "set-grades") {
-            const gradesCsv = options.getString("grades");
-            if (!gradesCsv)
-              return interaction.reply({
-                content: "❌ Liste de grades manquante",
-                ephemeral: true,
-              });
-            const gradesArr = gradesCsv
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            if (gradesArr.length === 0)
-              return interaction.reply({
-                content: "❌ Liste invalide",
-                ephemeral: true,
-              });
-            database.config.gradeOrder = gradesArr;
-            saveDatabase();
-            return interaction.reply({
-              content: `✅ Ordre des grades mis a jour : ${gradesArr.join(" > ")}`,
-              ephemeral: true,
-            });
-          }
-
-          if (sub === "view-grades") {
-            const order =
-              database.config.gradeOrder && database.config.gradeOrder.length
-                ? database.config.gradeOrder
-                : "Aucun ordre personnalisé (utilise l'ordre par défaut)";
-            return interaction.reply({
-              content: `📋 Ordre des grades : ${Array.isArray(order) ? order.join(" > ") : order}`,
-              ephemeral: true,
-            });
-          }
-        } else {
-          // Support si un slash command top-level "set-image" / "set_image" / "set-grades" existe
-          if (commandName === "set-grades" || commandName === "set_grades") {
-            const gradesCsv = options.getString("grades");
-            if (!gradesCsv)
-              return interaction.reply({
-                content: "❌ Liste de grades manquante",
-                ephemeral: true,
-              });
-            const gradesArr = gradesCsv
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            if (gradesArr.length === 0)
-              return interaction.reply({
-                content: "❌ Liste invalide",
-                ephemeral: true,
-              });
-            database.config.gradeOrder = gradesArr;
-            saveDatabase();
-            return interaction.reply({
-              content: `✅ Ordre des grades mis a jour : ${gradesArr.join(" > ")}`,
-              ephemeral: true,
-            });
-          }
-
-          const url = options.getString("url");
-          if (!url)
-            return interaction.reply({
-              content: "❌ URL manquante",
-              ephemeral: true,
-            });
-          database.config.embedImage = url;
-          saveDatabase();
+    } else if (commandName === "channel_whitelist") {
+      const sub = options.getSubcommand();
+      
+      if (sub === "add") {
+        const channel = options.getChannel("channel");
+        if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
+        
+        if (database.config.whitelistChannels.includes(channel.id)) {
           return interaction.reply({
-            content: "✅ Image des embeds mise a jour.",
+            content: `❌ ${channel} est déjà dans la whitelist.`,
             ephemeral: true,
           });
         }
-      } catch (err) {
-        console.error("Erreur lors du set-image/set-grades:", err);
+        
+        database.config.whitelistChannels.push(channel.id);
+        saveDatabase();
         return interaction.reply({
-          content: "❌ Impossible de mettre a jour la configuration",
+          content: `✅ ${channel} ajouté à la whitelist.`,
+          ephemeral: true,
+        });
+      }
+
+      if (sub === "remove") {
+        const channel = options.getChannel("channel");
+        if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
+        
+        const idx = database.config.whitelistChannels.indexOf(channel.id);
+        if (idx === -1) {
+          return interaction.reply({
+            content: `❌ ${channel} n'est pas dans la whitelist.`,
+            ephemeral: true,
+          });
+        }
+        
+        database.config.whitelistChannels.splice(idx, 1);
+        saveDatabase();
+        return interaction.reply({
+          content: `✅ ${channel} retiré de la whitelist.`,
+          ephemeral: true,
+        });
+      }
+
+      if (sub === "list") {
+        const channels = database.config.whitelistChannels || [];
+        const channelMentions = channels.map(id => `<#${id}>`).join("\n") || "Aucun salon whitelisté";
+        
+        const embed = new EmbedBuilder()
+          .setTitle("🔓 Salons Whitelistés")
+          .setDescription(channelMentions)
+          .setColor(0x00ff00);
+        
+        return interaction.reply({
+          embeds: [embed],
           ephemeral: true,
         });
       }
     }
+
+    // Modifier la commande d'ajout d'agent pour whitelist le salon
+    if (commandName === "agents" && options.getSubcommand() === "ajouter") {
+      const dossierChannel = options.getChannel("dossier_channel");
+      // ...existing code for agent adding...
+
+      // Ajouter automatiquement le salon à la whitelist
+      if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
+      if (!database.config.whitelistChannels.includes(dossierChannel.id)) {
+        database.config.whitelistChannels.push(dossierChannel.id);
+        saveDatabase();
+      }
+      // ...rest of existing agent adding code...
+    }
+    // ...existing code...
   } catch (error) {
     console.error("Erreur lors du traitement de la commande:", error);
     await interaction.reply({ 
@@ -2258,8 +2267,12 @@ client
 // Nouveau : détecter les liens non whitelistés et DM l'auteur
 client.on("messageCreate", async (message) => {
   try {
-    if (!message.guild) return; // ignore DMs
-    if (message.author?.bot) return;
+    if (!message.guild || message.author?.bot) return;
+
+    // Vérifier si le salon est whitelisté
+    if (database.config.whitelistChannels?.includes(message.channel.id)) {
+      return; // Autoriser tous les liens dans les salons whitelistés
+    }
 
     // Collecter toutes les URLs : contenu, attachments, embeds (url/image/thumbnail)
     const urls = new Set();
