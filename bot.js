@@ -2247,6 +2247,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
               .catch(() => null);
             if (logChannel) {
              
+             
               const grade = getMemberGrade(member);
 
               const embed = new EmbedBuilder()
