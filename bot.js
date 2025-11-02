@@ -183,7 +183,7 @@ function getMemberGrade(member) {
   }
 
   // Fallback sur Agent si aucun grade trouvé
-  return "Agent";
+  return "Tes qui enfaite ?";
 }
 
 client.once("ready", () => {
