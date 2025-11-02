@@ -173,17 +173,19 @@ function calculateSalary(agent, member) {
 }
 
 function getMemberGrade(member) {
+  // ...modified: rendre sûr si member ou roles manquent...
   const configuredOrder = database.config.gradeOrder || [];
-  
-  // Vérifier chaque grade dans l'ordre configuré
+  if (!member || !member.roles || !member.roles.cache) {
+    return "Agent";
+  }
+
   for (const roleId of configuredOrder) {
     if (member.roles.cache.has(roleId)) {
       return `<@&${roleId}>`;
     }
   }
 
-  // Fallback sur Agent si aucun grade trouvé
-  return "Tes qui enfaite ?";
+  return "Agent";
 }
 
 client.once("ready", () => {
@@ -632,6 +634,19 @@ async function registerCommands() {
           description: "Afficher l'ordre actuel des grades",
           type: 1,
         },
+        {
+          name: "set-grades-list",
+          description: "Définir l'ordre des grades via mentions séparées par des virgules (ex: @Role1,@Role2)",
+          type: 1,
+          options: [
+            {
+              name: "roles",
+              description: "Liste de rôles séparés par des virgules (mentions, IDs ou noms)",
+              type: 3,
+              required: true,
+            },
+          ],
+        },
       ],
     },
     {
@@ -1015,8 +1030,8 @@ async function handleCommand(interaction) {
                     value: `${user.tag} (<@${user.id}>)`,
                     inline: false,
                   },
-                  { name: "Matricule", value: String(matricule), inline: true },
-                  { name: "ID Unique", value: String(uniqueId), inline: true },
+                  { name: "Matricule", value: `➜ ${matricule}`, inline: true },
+                  { name: "ID Unique", value: `➜ ${uniqueId}`, inline: true },
                   {
                     name: "Dossier",
                     value: `<#${dossierChannel.id}>`,
@@ -1689,7 +1704,7 @@ async function handleCommand(interaction) {
         sub = options.getSubcommand();
       } catch (e) {
         return interaction.reply({
-          content: "❌ Sous-commande manquante. Utilisation: /config <set-image|set-grades-...|view-grades>",
+          content: "❌ Sous-commande manquante. Utilisation: /config <set-image|set-grades-...|view-grades|set-grades-list>",
           ephemeral: true,
         });
       }
@@ -1705,7 +1720,7 @@ async function handleCommand(interaction) {
         return interaction.reply({ content: "✅ Image des embeds définie.", ephemeral: true });
       }
 
-      // utilitaire pour collecter les rôles fournis
+      // utilitaire pour collecter les rôles fournis (noms grade1..grade20 ou autres)
       const collectGrades = (names) => {
         const ids = [];
         for (const n of names) {
@@ -1715,7 +1730,20 @@ async function handleCommand(interaction) {
         return ids;
       };
 
-      // set-grades-1-5 (remplace l'ordre)
+      // set-grades-1-20 : compat avec la définition actuelle des commandes
+      if (sub === "set-grades-1-20") {
+        const names = [];
+        for (let i = 1; i <= 20; i++) names.push(`grade${i}`);
+        const ids = collectGrades(names);
+        if (!ids.length) {
+          return interaction.reply({ content: "❌ Aucun rôle fourni ou valide.", ephemeral: true });
+        }
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Grades 1-20 enregistrés (${ids.length} rôles).`, ephemeral: true });
+      }
+
+      // set-grades-1-5 (compat)
       if (sub === "set-grades-1-5") {
         const ids = collectGrades(["grade1", "grade2", "grade3", "grade4", "grade5"]);
         database.config.gradeOrder = ids;
@@ -1747,6 +1775,42 @@ async function handleCommand(interaction) {
         return interaction.reply({ content: `✅ Grades 16-20 enregistrés (${ids.length} rôles).`, ephemeral: true });
       }
 
+      // set-grades-list (chaine, mentions ou noms séparés par virgule)
+      if (sub === "set-grades-list") {
+        const rolesStr = options.getString("roles") || "";
+        const trimmed = rolesStr.trim();
+        if (!trimmed) {
+          return interaction.reply({ content: "❌ Liste de rôles vide.", ephemeral: true });
+        }
+
+        const ids = [];
+        const mentionRegex = /<@&(\d+)>/g;
+        let m;
+        while ((m = mentionRegex.exec(trimmed)) !== null) {
+          ids.push(m[1]);
+        }
+
+        if (ids.length === 0) {
+          const parts = trimmed.split(",").map(p => p.trim()).filter(Boolean);
+          for (const part of parts) {
+            const idMatch = part.match(/^(\d{17,20})$/);
+            if (idMatch) { ids.push(idMatch[1]); continue; }
+            const maybeName = part.replace(/^@/, "");
+            const byName = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === maybeName.toLowerCase());
+            if (byName) { ids.push(byName.id); continue; }
+            // ignore if not found
+          }
+        }
+
+        if (!ids.length) {
+          return interaction.reply({ content: "❌ Aucun rôle valide trouvé dans la liste fournie.", ephemeral: true });
+        }
+
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Ordre des grades enregistré (${ids.length} rôles).`, ephemeral: true });
+      }
+
       // view-grades
       if (sub === "view-grades") {
         const order = database.config.gradeOrder || [];
@@ -1762,10 +1826,17 @@ async function handleCommand(interaction) {
     }
   } catch (error) {
     console.error("Erreur lors du traitement de la commande:", error);
-    await interaction.reply({ 
-      content: "❌ Une erreur est survenue", 
-      ephemeral: true 
-    }).catch(() => {});
+    // Eviter double reply si interaction déjà gérée
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "❌ Une erreur est survenue",
+          ephemeral: true,
+        });
+      }
+    } catch (e) {
+      // ignorer
+    }
   }
 }
 
@@ -1929,9 +2000,13 @@ async function handleButton(interaction) {
     }
   } catch (error) {
     console.error("Erreur lors du traitement du bouton:", error);
-    await interaction
-      .reply({ content: "❌ Une erreur est survenue", ephemeral: true })
-      .catch(() => {});
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: "❌ Une erreur est survenue", ephemeral: true });
+      }
+    } catch (e) {
+      // ignorer
+    }
   }
 }
 
@@ -2171,6 +2246,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
               .fetch(database.config.logChannel)
               .catch(() => null);
             if (logChannel) {
+             
               const grade = getMemberGrade(member);
 
               const embed = new EmbedBuilder()
