@@ -272,16 +272,6 @@ async function registerCommands() {
           name: "liste",
           description: "Affiche la liste des matricules disponibles",
           type: 1,
-          options: [
-            {
-              name: "page",
-              description: "Numero de page (1-3)",
-              type: 4,
-              required: false,
-              min_value: 1,
-              max_value: 3,
-            },
-          ],
         },
       ],
     },
@@ -1007,18 +997,15 @@ async function handleCommand(interaction) {
 
         await interaction.reply({ embeds: [embed] });
       } else if (subcommand === "liste") {
-        const start = 1;
-        const end = 99;
-
         const embed = new EmbedBuilder()
-          .setTitle(`📋 Liste des Agents`)
+          .setTitle("📋 Liste des Agents")
           .setColor(0x3498db)
           .setThumbnail(database.config.embedImage);
 
         let description = "";
-        for (let i = start; i <= end; i++) {
+        for (let i = 1; i <= 99; i++) {
           const agent = Object.values(database.agents).find(
-            (a) => a.matricule === i,
+            (a) => a.matricule === i
           );
           if (agent) {
             description += `👮 [${String(i).padStart(2, "0")}] - <@${agent.userId}>\n`;
@@ -1028,9 +1015,6 @@ async function handleCommand(interaction) {
         }
 
         embed.setDescription(description);
-        embed.setFooter({
-        });
-
         await interaction.reply({ embeds: [embed] });
       }
     } else if (commandName === "rapport") {
