@@ -780,6 +780,34 @@ async function handleCommand(interaction) {
   const { commandName, options } = interaction;
 
   try {
+    if (commandName === "setup_channel_rapport_temporaire") {
+      const channel = options.getChannel("channel");
+      
+      const embed = new EmbedBuilder()
+        .setTitle("📊 Rapports Temporaires")
+        .setDescription("Cliquez sur le bouton ci-dessous pour voir votre rapport temporaire d'heures et salaire.")
+        .setColor(0x3498db)
+        .setThumbnail(database.config.embedImage);
+
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId("voir_rapport_temporaire")
+            .setLabel("Voir mon rapport")
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji("📋")
+        );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      
+      await interaction.reply({
+        content: `✅ Le bouton de rapport temporaire a été installé dans ${channel}`,
+        ephemeral: true
+      });
+      
+      return;
+    }
+
     // Handler /transcript
     if (commandName === "transcript") {
       const sub = options.getSubcommand();
