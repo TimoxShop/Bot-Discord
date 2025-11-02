@@ -583,8 +583,9 @@ async function registerCommands() {
           ],
         },
         {
-          name: "set-grades",
-          description: "Définir l'ordre des grades (du plus haut au plus bas)",
+{
+          name: "set-grades-1-5",
+          description: "Définir les grades 1 à 5 (du plus haut au plus bas)",
           type: 1,
           options: [
             {
@@ -617,91 +618,112 @@ async function registerCommands() {
               type: 8,
               required: false,
             },
-                        {
+          ],
+        },
+        {
+          name: "set-grades-6-10",
+          description: "Définir les grades 6 à 10",
+          type: 1,
+          options: [
+            {
               name: "grade6",
               description: "6ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade7",
               description: "7ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade8",
               description: "8ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade9",
               description: "9ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade10",
               description: "10ème grade",
               type: 8,
               required: false,
             },
-                        {
+          ],
+        },
+        {
+          name: "set-grades-11-15",
+          description: "Définir les grades 11 à 15",
+          type: 1,
+          options: [
+            {
               name: "grade11",
               description: "11ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade12",
               description: "12ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade13",
               description: "13ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade14",
               description: "14ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade15",
               description: "15ème grade",
               type: 8,
               required: false,
             },
-                        {
+          ],
+        },
+        {
+          name: "set-grades-16-20",
+          description: "Définir les grades 16 à 20",
+          type: 1,
+          options: [
+            {
               name: "grade16",
               description: "16ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade17",
               description: "17ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade18",
               description: "18ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade19",
               description: "19ème grade",
               type: 8,
               required: false,
             },
-                        {
+            {
               name: "grade20",
               description: "20ème grade",
               type: 8,
