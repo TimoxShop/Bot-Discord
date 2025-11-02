@@ -1396,434 +1396,80 @@ async function handleCommand(interaction) {
           );
         }
       }
-    } else if (commandName === "abs-button") {
-      const embed = new EmbedBuilder()
-        .setTitle("📅 Declaration d'absence")
-        .setDescription(
-          "📝 **Remplir le formulaire**\nDeclare une absence en precisando la date de debut, de fin et la raison.\n\n👁️ **Voir mes absences**\nConsulte la liste de tes absences en cours ou passees.\n\n❌ **Supprimer mon absence**\nAnnule une absence enregistree si elle n'est plus d'actualite.",
-        )
-        .setColor(0x3498db);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("abs_fill_form")
-          .setLabel("Remplir le formulaire")
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji("📝"),
-        new ButtonBuilder()
-          .setCustomId("abs_view")
-          .setLabel("Voir mes absences")
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji("👁️"),
-        new ButtonBuilder()
-          .setCustomId("abs_delete")
-          .setLabel("Supprimer mon absence")
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji("❌"),
-      );
-
-      await interaction.reply({ embeds: [embed], components: [row] });
-    } else if (commandName === "abs-channel-confirm") {
-      const channel = options.getChannel("channel");
-      database.config.absenceChannelConfirm = channel.id;
-      saveDatabase();
-
-      await interaction.reply({
-        content: `✅ Le salon de confirmation des absences a ete defini sur ${channel}`,
-        ephemeral: true,
-      });
-    } else if (commandName === "abs-role") {
-      const role = options.getRole("role");
-      database.config.absenceRole = role.id;
-      saveDatabase();
-
-      await interaction.reply({
-        content: `✅ Le role ABS a ete defini sur ${role}`,
-        ephemeral: true,
-      });
-    } else if (commandName === "setup-voiceservice") {
-      const subcommand = options.getSubcommand();
-
-      if (subcommand === "add-voicechannel") {
-        const channel = options.getChannel("channel");
-        if (!database.config.serviceVoiceChannels.includes(channel.id)) {
-          database.config.serviceVoiceChannels.push(channel.id);
-          saveDatabase();
-          await interaction.reply({
-            content: `✅ Le salon vocal ${channel} a ete ajoute pour les prises de service`,
-            ephemeral: true,
-          });
-        } else {
-          await interaction.reply({
-            content: `❌ Ce salon est deja configure`,
-            ephemeral: true,
-          });
-        }
-      } else if (subcommand === "remove-voicechannel") {
-        const channel = options.getChannel("channel");
-        const index = database.config.serviceVoiceChannels.indexOf(channel.id);
-        if (index > -1) {
-          database.config.serviceVoiceChannels.splice(index, 1);
-          saveDatabase();
-          await interaction.reply({
-            content: `✅ Le salon vocal ${channel} a ete retire des prises de service`,
-            ephemeral: true,
-          });
-        } else {
-          await interaction.reply({
-            content: `❌ Ce salon n'etait pas configure`,
-            ephemeral: true,
-          });
-        }
-      } else if (subcommand === "set-logchannel") {
-        const channel = options.getChannel("channel");
-        database.config.logChannel = channel.id;
-        saveDatabase();
-        await interaction.reply({
-          content: `✅ Le salon de logs a ete defini sur ${channel}`,
-          ephemeral: true,
-        });
-      } else if (subcommand === "set-default-role") {
-        const role = options.getRole("role");
-        database.config.defaultRole = role.id;
-        saveDatabase();
-        await interaction.reply({
-          content: `✅ Le role par defaut a ete defini sur ${role}`,
-          ephemeral: true,
-        });
-      } else if (subcommand === "view") {
-        const logChannel = database.config.logChannel
-          ? `<#${database.config.logChannel}>`
-          : "Non defini";
-        const voiceChannels =
-          database.config.serviceVoiceChannels
-            .map((id) => `<#${id}>`)
-            .join("\n") || "Aucun";
-        const defaultRole = database.config.defaultRole
-          ? `<@&${database.config.defaultRole}>`
-          : "Non defini";
-
-        const embed = new EmbedBuilder()
-          .setTitle("⚙️ Configuration actuelle des channels de service")
-          .setColor(0x3498db)
-          .addFields(
-            { name: "📢 Salon de logs", value: logChannel },
-            { name: "🔊 Salons vocaux de service", value: voiceChannels },
-            { name: "👥 Role par defaut", value: defaultRole },
-          );
-
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-      }
-    } else if (commandName === "salary") {
-      const subcommand = options.getSubcommand();
-
-      if (subcommand === "set-hours") {
-        const montant = options.getNumber("montant");
-        database.salaryConfig.hourlyRate = montant;
-        saveDatabase();
-
-        await interaction.reply({
-          content: `✅ Le taux horaire a ete defini a ${montant.toLocaleString("fr-FR")} $`,
-          ephemeral: true,
-        });
-      } else if (subcommand === "set-role") {
-        const role = options.getRole("role");
-        const montant = options.getNumber("montant");
-
-        database.salaryConfig.roleSalaries[role.id] = montant;
-        saveDatabase();
-
-        await interaction.reply({
-          content: `✅ Le salaire fixe pour ${role} a ete defini a ${montant.toLocaleString("fr-FR")} $`,
-          ephemeral: true,
-        });
-      } else if (subcommand === "view") {
-        const hourlyRate = database.salaryConfig.hourlyRate || 0;
-        let rolesList = "";
-
-        for (const [roleId, salary] of Object.entries(
-          database.salaryConfig.roleSalaries || {},
-        )) {
-          rolesList += `<@&${roleId}> : ${salary.toLocaleString("fr-FR")} $\n`;
-        }
-
-        if (!rolesList) rolesList = "Aucun salaire configure";
-
-        const embed = new EmbedBuilder()
-          .setTitle("💰 Configuration des salaires")
-          .setColor(0xffd700)
-          .addFields(
-            {
-              name: "⏱️ Taux horaire",
-              value: `${hourlyRate.toLocaleString("fr-FR")} $ / heure`,
-            },
-            { name: "👥 Salaires par role", value: rolesList },
-          );
-
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-      } else if (subcommand === "remove") {
-        const role = options.getRole("role");
-
-        if (database.salaryConfig.roleSalaries[role.id]) {
-          delete database.salaryConfig.roleSalaries[role.id];
-          saveDatabase();
-          await interaction.reply({
-            content: `✅ Le salaire pour ${role} a ete supprime`,
-            ephemeral: true,
-          });
-        } else {
-          await interaction.reply({
-            content: `❌ Aucun salaire configure pour ce role`,
-            ephemeral: true,
-          });
-        }
-      }
-    } else if (commandName === "whitelist") {
-      const sub = options.getSubcommand();
-      
-      // Initialiser si nécessaire
-      if (!database.config.whitelistDomains) database.config.whitelistDomains = [];
-
-      if (sub === "add") {
-        const domain = options.getString("domaine")
-          .toLowerCase()
-          .replace(/^https?:\/\//i, '')  // Retire http:// et https://
-          .replace(/^www\./i, '')        // Retire www.
-          .split('/')[0];                // Garde uniquement le domaine
-
-        // Vérifier si le domaine existe déjà
-        if (database.config.whitelistDomains.includes(domain)) {
-          return interaction.reply({
-            content: `❌ Le domaine \`${domain}\` est déjà dans la whitelist.`,
-            ephemeral: true
-          });
-        }
-
-        // Ajouter le domaine
-        database.config.whitelistDomains.push(domain);
-        saveDatabase();
-
-        return interaction.reply({
-          content: `✅ Le domaine \`${domain}\` a été ajouté à la whitelist.`,
-          ephemeral: true
-        });
-      }
-      else if (sub === "remove") {
-        const domain = options
-          .getString("domaine")
-          .toLowerCase()
-          .replace(/^www\./i, "");
-        const list = database.config.whitelistDomains || [];
-        const idx = list.findIndex((d) => d.toLowerCase() === domain);
-        if (idx === -1) {
-          return interaction.reply({
-            content: `❌ ${domain} n'est pas dans la whitelist.`,
-            ephemeral: true,
-          });
-        }
-        list.splice(idx, 1);
-        database.config.whitelistDomains = list;
-        saveDatabase();
-        return interaction.reply({
-          content: `✅ ${domain} retiré de la whitelist.`,
-          ephemeral: true,
-        });
-      }
-
-      if (sub === "list") {
-        const list = database.config.whitelistDomains || [];
-        return interaction.reply({
-          content: list.length
-            ? `Whitelist: ${list.join(", ")}`
-            : "Aucun domaine whitelisté.",
-          ephemeral: true,
-        });
-      }
-    } else if (commandName === "channel_whitelist") {
-      const sub = options.getSubcommand();
-      
-      if (sub === "add") {
-        const channel = options.getChannel("channel");
-        if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
-        
-        if (database.config.whitelistChannels.includes(channel.id)) {
-          return interaction.reply({
-            content: `❌ ${channel} est déjà dans la whitelist.`,
-            ephemeral: true,
-          });
-        }
-        
-        database.config.whitelistChannels.push(channel.id);
-        saveDatabase();
-        return interaction.reply({
-          content: `✅ ${channel} ajouté à la whitelist.`,
-          ephemeral: true,
-        });
-      }
-
-      if (sub === "remove") {
-        const channel = options.getChannel("channel");
-        if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
-        
-        const idx = database.config.whitelistChannels.indexOf(channel.id);
-        if (idx === -1) {
-          return interaction.reply({
-            content: `❌ ${channel} n'est pas dans la whitelist.`,
-            ephemeral: true,
-          });
-        }
-        
-        database.config.whitelistChannels.splice(idx, 1);
-        saveDatabase();
-        return interaction.reply({
-          content: `✅ ${channel} retiré de la whitelist.`,
-          ephemeral: true,
-        });
-      }
-
-      if (sub === "list") {
-        const channels = database.config.whitelistChannels || [];
-        const channelMentions = channels.map(id => `<#${id}>`).join("\n") || "Aucun salon whitelisté";
-        
-        const embed = new EmbedBuilder()
-          .setTitle("🔓 Salons Whitelistés")
-          .setDescription(channelMentions)
-          .setColor(0x00ff00);
-        
-        return interaction.reply({
-          embeds: [embed],
-          ephemeral: true,
-        });
-      }
-    }
-    // --- NEW: gestion de la commande "config" ---
-    if (commandName === "config") {
-      // Sécuriser la récupération de la sous-commande
-      let sub;
+    } else if (commandName === "top-agents") {
+      // Déférer pour éviter timeout si le calcul prend du temps
+      let deferred = false;
       try {
-        sub = options.getSubcommand();
+        await interaction.deferReply({ ephemeral: false });
+        deferred = true;
       } catch (e) {
-        return interaction.reply({
-          content: "❌ Sous-commande manquante. Utilisation: /config <set-image|set-grades-...|view-grades|set-grades-list>",
-          ephemeral: true,
-        });
+        // ignore: si defer échoue on continuera et on utilisera reply
       }
 
-      // set-image
-      if (sub === "set-image") {
-        const url = options.getString("url");
-        if (!url) {
-          return interaction.reply({ content: "❌ URL manquante.", ephemeral: true });
-        }
-        database.config.embedImage = url;
-        saveDatabase();
-        return interaction.reply({ content: "✅ Image des embeds définie.", ephemeral: true });
-      }
+      try {
+        const now = Date.now();
+        const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+        const scores = [];
 
-      // utilitaire pour collecter les rôles fournis (noms grade1..grade20 ou autres)
-      const collectGrades = (names) => {
-        const ids = [];
-        for (const n of names) {
-          const r = options.getRole(n);
-          if (r) ids.push(r.id);
-        }
-        return ids;
-      };
+        const agents = database.agents || {};
+        for (const [userId, agent] of Object.entries(agents)) {
+          const services = (database.services && database.services[userId]) || [];
+          let totalMs = 0;
 
-      // set-grades-1-20 : compat avec la définition actuelle des commandes
-      if (sub === "set-grades-1-20") {
-        const names = [];
-        for (let i = 1; i <= 20; i++) names.push(`grade${i}`);
-        const ids = collectGrades(names);
-        if (!ids.length) {
-          return interaction.reply({ content: "❌ Aucun rôle fourni ou valide.", ephemeral: true });
-        }
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Grades 1-20 enregistrés (${ids.length} rôles).`, ephemeral: true });
-      }
+          for (const s of services) {
+            const start = Number(s.startTime || 0);
+            const end = Number(s.endTime || now);
+            if (isNaN(start) || isNaN(end) || end <= start) continue;
 
-      // set-grades-1-5 (compat)
-      if (sub === "set-grades-1-5") {
-        const ids = collectGrades(["grade1", "grade2", "grade3", "grade4", "grade5"]);
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Grades 1-5 enregistrés (${ids.length} rôles).`, ephemeral: true });
-      }
-
-      // set-grades-6-10
-      if (sub === "set-grades-6-10") {
-        const ids = collectGrades(["grade6", "grade7", "grade8", "grade9", "grade10"]);
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Grades 6-10 enregistrés (${ids.length} rôles).`, ephemeral: true });
-      }
-
-      // set-grades-11-15
-      if (sub === "set-grades-11-15") {
-        const ids = collectGrades(["grade11", "grade12", "grade13", "grade14", "grade15"]);
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Grades 11-15 enregistrés (${ids.length} rôles).`, ephemeral: true });
-      }
-
-      // set-grades-16-20
-      if (sub === "set-grades-16-20") {
-        const ids = collectGrades(["grade16", "grade17", "grade18", "grade19", "grade20"]);
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Grades 16-20 enregistrés (${ids.length} rôles).`, ephemeral: true });
-      }
-
-      // set-grades-list (chaine, mentions ou noms séparés par virgule)
-      if (sub === "set-grades-list") {
-        const rolesStr = options.getString("roles") || "";
-        const trimmed = rolesStr.trim();
-        if (!trimmed) {
-          return interaction.reply({ content: "❌ Liste de rôles vide.", ephemeral: true });
-        }
-
-        const ids = [];
-        const mentionRegex = /<@&(\d+)>/g;
-        let m;
-        while ((m = mentionRegex.exec(trimmed)) !== null) {
-          ids.push(m[1]);
-        }
-
-        if (ids.length === 0) {
-          const parts = trimmed.split(",").map(p => p.trim()).filter(Boolean);
-          for (const part of parts) {
-            const idMatch = part.match(/^(\d{17,20})$/);
-            if (idMatch) { ids.push(idMatch[1]); continue; }
-            const maybeName = part.replace(/^@/, "");
-            const byName = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === maybeName.toLowerCase());
-            if (byName) { ids.push(byName.id); continue; }
-            // ignore if not found
+            const overlapStart = Math.max(start, weekAgo);
+            const overlapEnd = Math.min(end, now);
+            if (overlapEnd > overlapStart) totalMs += overlapEnd - overlapStart;
           }
+
+          if (totalMs > 0) scores.push({ userId, agent, totalMs });
         }
 
-        if (!ids.length) {
-          return interaction.reply({ content: "❌ Aucun rôle valide trouvé dans la liste fournie.", ephemeral: true });
+        if (scores.length === 0) {
+          const content = "Aucun agent actif cette semaine.";
+          if (deferred) return interaction.editReply({ content });
+          return interaction.reply({ content, ephemeral: true });
         }
 
-        database.config.gradeOrder = ids;
-        saveDatabase();
-        return interaction.reply({ content: `✅ Ordre des grades enregistré (${ids.length} rôles).`, ephemeral: true });
+        scores.sort((a, b) => b.totalMs - a.totalMs);
+        const top = scores.slice(0, 5);
+
+        const lines = top.map((t, idx) => {
+          const minutes = Math.floor(t.totalMs / (1000 * 60));
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const matricule = t.agent && t.agent.matricule ? String(t.agent.matricule).padStart(2, "0") : "N/A";
+          return `#${idx + 1} • [${matricule}] ${t.agent.username} (<@${t.userId}>) — ${hours}h ${mins}m`;
+        });
+
+        const embed = new EmbedBuilder()
+          .setTitle("🏆 Top 5 agents (7 derniers jours)")
+          .setDescription(lines.join("\n"))
+          .setColor(0x00ff00)
+          .setTimestamp();
+
+        if (deferred) {
+          await interaction.editReply({ embeds: [embed] });
+        } else {
+          await interaction.reply({ embeds: [embed] });
+        }
+
+        return;
+      } catch (err) {
+        console.error("Erreur top-agents:", err);
+        const msg = "❌ Une erreur est survenue lors du calcul du top.";
+        try {
+          if (deferred) await interaction.editReply({ content: msg });
+          else await interaction.reply({ content: msg, ephemeral: true });
+        } catch (e) {}
+        return;
       }
-
-      // view-grades
-      if (sub === "view-grades") {
-        const order = database.config.gradeOrder || [];
-        if (!order.length) {
-          return interaction.reply({ content: "Aucun ordre de grades configuré.", ephemeral: true });
-        }
-        const mentions = order.map(id => `<@&${id}>`).join("\n");
-        return interaction.reply({ content: `Ordre des grades:\n${mentions}`, ephemeral: true });
-      }
-
-      // si sous-commande inconnue
-      return interaction.reply({ content: "❌ Sous-commande inconnue.", ephemeral: true });
     }
+    // ...existing code...
   } catch (error) {
     console.error("Erreur lors du traitement de la commande:", error);
     // Eviter double reply si interaction déjà gérée
@@ -2246,6 +1892,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
               .fetch(database.config.logChannel)
               .catch(() => null);
             if (logChannel) {
+             
              
              
               const grade = getMemberGrade(member);
