@@ -105,6 +105,10 @@ function loadDatabase() {
     if (fs.existsSync(DB_PATH)) {
       const data = fs.readFileSync(DB_PATH, "utf8");
       database = JSON.parse(data);
+      
+      // S'assurer que les tableaux de whitelist existent
+      if (!database.config.whitelistDomains) database.config.whitelistDomains = [];
+      if (!database.config.whitelistChannels) database.config.whitelistChannels = [];
       if (!database.config.embedImage) {
         database.config.embedImage = "https://i.imgur.com/lQMZxSh.png";
       }
@@ -1551,28 +1555,35 @@ async function handleCommand(interaction) {
       }
     } else if (commandName === "whitelist") {
       const sub = options.getSubcommand();
+      
+      // Initialiser si nécessaire
+      if (!database.config.whitelistDomains) database.config.whitelistDomains = [];
+
       if (sub === "add") {
-        const domain = options
-          .getString("domaine")
+        const domain = options.getString("domaine")
           .toLowerCase()
-          .replace(/^www\./i, "");
-        const list = database.config.whitelistDomains || [];
-        if (list.map((d) => d.toLowerCase()).includes(domain)) {
+          .replace(/^https?:\/\//i, '')  // Retire http:// et https://
+          .replace(/^www\./i, '')        // Retire www.
+          .split('/')[0];                // Garde uniquement le domaine
+
+        // Vérifier si le domaine existe déjà
+        if (database.config.whitelistDomains.includes(domain)) {
           return interaction.reply({
-            content: `❌ ${domain} est déjà dans la whitelist.`,
-            ephemeral: true,
+            content: `❌ Le domaine \`${domain}\` est déjà dans la whitelist.`,
+            ephemeral: true
           });
         }
-        list.push(domain);
-        database.config.whitelistDomains = list;
+
+        // Ajouter le domaine
+        database.config.whitelistDomains.push(domain);
         saveDatabase();
+
         return interaction.reply({
-          content: `✅ ${domain} ajouté à la whitelist.`,
-          ephemeral: true,
+          content: `✅ Le domaine \`${domain}\` a été ajouté à la whitelist.`,
+          ephemeral: true
         });
       }
-
-      if (sub === "remove") {
+      else if (sub === "remove") {
         const domain = options
           .getString("domaine")
           .toLowerCase()
@@ -2322,12 +2333,18 @@ client.on("messageCreate", async (message) => {
       try {
         const parsed = new URL(rawUrl);
         const domain = parsed.hostname.replace(/^www\./i, "").toLowerCase();
-        if (!whitelist.includes(domain)) {
+        
+        // Vérifier si le domaine ou un de ses parents est dans la whitelist
+        const isWhitelisted = database.config.whitelistDomains.some(whiteDomain => 
+          domain === whiteDomain || domain.endsWith(`.${whiteDomain}`)
+        );
+        
+        if (!isWhitelisted) {
           foundUnwhitelisted = true;
           break;
         }
       } catch (e) {
-        // url invalide -> ignorer
+        // URL invalide -> ignorer
       }
     }
 
