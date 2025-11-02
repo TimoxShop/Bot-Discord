@@ -173,36 +173,16 @@ function calculateSalary(agent, member) {
 }
 
 function getMemberGrade(member) {
-  // Utiliser l'ordre de grades configuré si présent, sinon fallback par défaut
-  const configuredOrder =
-    database.config &&
-    Array.isArray(database.config.gradeOrder) &&
-    database.config.gradeOrder.length
-      ? database.config.gradeOrder
-      : [
-          "Lieutenant",
-          "Sergent",
-          "Caporal",
-          "Agent",
-          "SWAT",
-          "S.W.A.T",
-          "ACA",
-          "SLO",
-          "OFF",
-          "LTN",
-          "SGT",
-        ];
-
-  for (const roleName of configuredOrder) {
-    const role = member.roles.cache.find(
-      (r) => r.name && r.name.toLowerCase().includes(roleName.toLowerCase()),
-    );
-    if (role) {
-      // Retourner uniquement la mention du rôle (ex: <@&ROLE_ID>) pour éviter l'affichage "Nom (@mention)"
-      return `<@&${role.id}>`;
+  const configuredOrder = database.config.gradeOrder || [];
+  
+  // Vérifier chaque grade dans l'ordre configuré
+  for (const roleId of configuredOrder) {
+    if (member.roles.cache.has(roleId)) {
+      return `<@&${roleId}>`;
     }
   }
 
+  // Fallback sur Agent si aucun grade trouvé
   return "Agent";
 }
 
@@ -604,16 +584,38 @@ async function registerCommands() {
         },
         {
           name: "set-grades",
-          description:
-            "Definir l'ordre des grades (séparés par des virgules, du plus haut au plus bas)",
+          description: "Définir l'ordre des grades (du plus haut au plus bas)",
           type: 1,
           options: [
             {
-              name: "grades",
-              description:
-                "Ex: Commandant,Lieutenant,Sergent,Caporal,Agent,Cadet",
-              type: 3,
+              name: "grade1",
+              description: "Grade le plus haut",
+              type: 8,
               required: true,
+            },
+            {
+              name: "grade2",
+              description: "2ème grade",
+              type: 8,
+              required: false,
+            },
+            {
+              name: "grade3",
+              description: "3ème grade",
+              type: 8,
+              required: false,
+            },
+            {
+              name: "grade4",
+              description: "4ème grade",
+              type: 8,
+              required: false,
+            },
+            {
+              name: "grade5",
+              description: "5ème grade",
+              type: 8,
+              required: false,
             },
           ],
         },
