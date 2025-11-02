@@ -601,8 +601,8 @@ async function registerCommands() {
           ],
         },
         {
-          name: "set-grades-1-5",
-          description: "Définir les grades 1 à 5 (du plus haut au plus bas)",
+          name: "set-grades-1-20",
+          description: "Définir les grades 1 à 20 (du plus haut au plus bas)",
           type: 1,
           options: [
             { name: "grade1", description: "Grade 1", type: 8, required: true },
@@ -610,37 +610,16 @@ async function registerCommands() {
             { name: "grade3", description: "Grade 3", type: 8, required: false },
             { name: "grade4", description: "Grade 4", type: 8, required: false },
             { name: "grade5", description: "Grade 5", type: 8, required: false },
-          ],
-        },
-        {
-          name: "set-grades-6-10",
-          description: "Grades 6-10",
-          type: 1,
-          options: [
             { name: "grade6", description: "Grade 6", type: 8, required: false },
             { name: "grade7", description: "Grade 7", type: 8, required: false },
             { name: "grade8", description: "Grade 8", type: 8, required: false },
             { name: "grade9", description: "Grade 9", type: 8, required: false },
             { name: "grade10", description: "Grade 10", type: 8, required: false },
-          ],
-        },
-        {
-          name: "set-grades-11-15",
-          description: "Grades 11-15",
-          type: 1,
-          options: [
             { name: "grade11", description: "Grade 11", type: 8, required: false },
             { name: "grade12", description: "Grade 12", type: 8, required: false },
             { name: "grade13", description: "Grade 13", type: 8, required: false },
             { name: "grade14", description: "Grade 14", type: 8, required: false },
             { name: "grade15", description: "Grade 15", type: 8, required: false },
-          ],
-        },
-        {
-          name: "set-grades-16-20",
-          description: "Grades 16-20",
-          type: 1,
-          options: [
             { name: "grade16", description: "Grade 16", type: 8, required: false },
             { name: "grade17", description: "Grade 17", type: 8, required: false },
             { name: "grade18", description: "Grade 18", type: 8, required: false },
