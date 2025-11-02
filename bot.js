@@ -1702,10 +1702,85 @@ async function handleCommand(interaction) {
         });
       }
     }
+    // --- NEW: gestion de la commande "config" ---
+    if (commandName === "config") {
+      // Sécuriser la récupération de la sous-commande
+      let sub;
+      try {
+        sub = options.getSubcommand();
+      } catch (e) {
+        return interaction.reply({
+          content: "❌ Sous-commande manquante. Utilisation: /config <set-image|set-grades-...|view-grades>",
+          ephemeral: true,
+        });
+      }
 
-    // --- SUPPRIMÉ: bloc redondant qui dupliquait l'ajout de dossierChannel à whitelist ---
-    // (la logique d'ajout à la whitelist est déjà effectuée dans agents -> ajouter)
-    // ...existing code...
+      // set-image
+      if (sub === "set-image") {
+        const url = options.getString("url");
+        if (!url) {
+          return interaction.reply({ content: "❌ URL manquante.", ephemeral: true });
+        }
+        database.config.embedImage = url;
+        saveDatabase();
+        return interaction.reply({ content: "✅ Image des embeds définie.", ephemeral: true });
+      }
+
+      // utilitaire pour collecter les rôles fournis
+      const collectGrades = (names) => {
+        const ids = [];
+        for (const n of names) {
+          const r = options.getRole(n);
+          if (r) ids.push(r.id);
+        }
+        return ids;
+      };
+
+      // set-grades-1-5 (remplace l'ordre)
+      if (sub === "set-grades-1-5") {
+        const ids = collectGrades(["grade1", "grade2", "grade3", "grade4", "grade5"]);
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Grades 1-5 enregistrés (${ids.length} rôles).`, ephemeral: true });
+      }
+
+      // set-grades-6-10
+      if (sub === "set-grades-6-10") {
+        const ids = collectGrades(["grade6", "grade7", "grade8", "grade9", "grade10"]);
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Grades 6-10 enregistrés (${ids.length} rôles).`, ephemeral: true });
+      }
+
+      // set-grades-11-15
+      if (sub === "set-grades-11-15") {
+        const ids = collectGrades(["grade11", "grade12", "grade13", "grade14", "grade15"]);
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Grades 11-15 enregistrés (${ids.length} rôles).`, ephemeral: true });
+      }
+
+      // set-grades-16-20
+      if (sub === "set-grades-16-20") {
+        const ids = collectGrades(["grade16", "grade17", "grade18", "grade19", "grade20"]);
+        database.config.gradeOrder = ids;
+        saveDatabase();
+        return interaction.reply({ content: `✅ Grades 16-20 enregistrés (${ids.length} rôles).`, ephemeral: true });
+      }
+
+      // view-grades
+      if (sub === "view-grades") {
+        const order = database.config.gradeOrder || [];
+        if (!order.length) {
+          return interaction.reply({ content: "Aucun ordre de grades configuré.", ephemeral: true });
+        }
+        const mentions = order.map(id => `<@&${id}>`).join("\n");
+        return interaction.reply({ content: `Ordre des grades:\n${mentions}`, ephemeral: true });
+      }
+
+      // si sous-commande inconnue
+      return interaction.reply({ content: "❌ Sous-commande inconnue.", ephemeral: true });
+    }
   } catch (error) {
     console.error("Erreur lors du traitement de la commande:", error);
     await interaction.reply({ 
