@@ -1,17 +1,11 @@
 // ============================================
-// ZEROPRICE DISCORD BOT - RAILWAY READY
-// Version: 1.1.0 (Améliorations de robustesse et d'erreurs)
+// ZEROPRICE DISCORD BOT - VERSION COMPLÈTE
 // ============================================
 
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 require('dotenv').config();
 
-// ============================================
-// CONFIGURATION
-// ============================================
-
-// NÉCESSITE L'ACTIVATION DE "Message Content Intent" DANS LE PORTAIL DEVELOPER
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,40 +14,38 @@ const client = new Client({
   ]
 });
 
-// Utilisez process.env pour les IDs des salons et le DraftBot
-const API_URL = process.env.API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.API_URL || 'https://zeroprice.alwaysdata.net/api.php';
 const API_KEY = process.env.API_KEY;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 
-// IDs configurés (Chargés depuis .env est FORTEMENT recommandé)
 const DRAFTBOT_CHANNEL_ID = process.env.DRAFTBOT_CHANNEL_ID || '1437408466648961146';
 const DRAFTBOT_ID = process.env.DRAFTBOT_ID || '318312854816161792';
 const NOTIF_CHANNEL_ID = process.env.NOTIF_CHANNEL_ID || '1437408883906969630';
-
 
 // ============================================
 // COMMANDES SLASH
 // ============================================
 
 const commands = [
-  // AJOUTER JEUX GRATUIT
+  // AJOUTER JEU
   new SlashCommandBuilder()
-    .setName('ajouter-jeu')
-    .setDescription('Ajouter un jeu gratuit sur ZeroPrice')
+    .setName('ajouter')
+    .setDescription('Ajouter un jeu gratuit')
     .addStringOption(opt => opt.setName('titre').setDescription('Nom du jeu').setRequired(true))
     .addStringOption(opt => opt.setName('image').setDescription('URL de l\'image').setRequired(true))
     .addStringOption(opt => opt.setName('lien').setDescription('Lien vers le jeu').setRequired(true))
-    .addStringOption(opt => opt.setName('description').setDescription('Description du jeu').setRequired(true))
+    .addStringOption(opt => opt.setName('description').setDescription('Description').setRequired(true))
     .addStringOption(opt => opt.setName('plateforme').setDescription('Plateforme')
       .addChoices(
         { name: 'PC', value: 'PC' },
         { name: 'PlayStation', value: 'PlayStation' },
         { name: 'Xbox', value: 'Xbox' },
-        { name: 'Nintendo Switch', value: 'Switch' },
-        { name: 'Mobile', value: 'Mobile' }
+        { name: 'Switch', value: 'Switch' },
+        { name: 'Mobile', value: 'Mobile' },
+        { name: 'Multi', value: 'Multi' }
       ).setRequired(true))
-    .addStringOption(opt => opt.setName('genre').setDescription('Genre du jeu')
+    .addStringOption(opt => opt.setName('genre').setDescription('Genre')
       .addChoices(
         { name: 'Action', value: 'Action' },
         { name: 'Aventure', value: 'Aventure' },
@@ -64,69 +56,40 @@ const commands = [
         { name: 'Sport', value: 'Sport' },
         { name: 'Stratégie', value: 'Stratégie' }
       ).setRequired(true))
-    .addStringOption(opt => opt.setName('type').setDescription('Type de gratuité')
+    .addStringOption(opt => opt.setName('type').setDescription('Type')
       .addChoices(
         { name: 'Gratuit Permanent', value: 'permanent' },
         { name: 'Gratuit Temporaire', value: 'temporaire' }
       ).setRequired(true))
-    .addStringOption(opt => opt.setName('date-fin').setDescription('Date de fin (si temporaire, format: YYYY-MM-DD HH:mm)').setRequired(false)),
+    .addStringOption(opt => opt.setName('date-fin').setDescription('Date fin (YYYY-MM-DD HH:mm)').setRequired(false)),
 
-  // AJOUTER PROMOTION
+  // RETIRER JEU
   new SlashCommandBuilder()
-    .setName('ajouter-promo')
-    .setDescription('Ajouter une promotion')
-    .addStringOption(opt => opt.setName('titre').setDescription('Nom du jeu').setRequired(true))
-    .addStringOption(opt => opt.setName('image').setDescription('URL de l\'image').setRequired(true))
-    .addStringOption(opt => opt.setName('lien').setDescription('Lien vers la promo').setRequired(true))
-    .addStringOption(opt => opt.setName('store').setDescription('Plateforme de vente')
-      .addChoices(
-        { name: 'Steam', value: 'Steam' },
-        { name: 'Epic Games', value: 'Epic' },
-        { name: 'PlayStation Store', value: 'PlayStation' },
-        { name: 'Xbox Store', value: 'Xbox' },
-        { name: 'Nintendo eShop', value: 'Nintendo' },
-        { name: 'GOG', value: 'GOG' }
-      ).setRequired(true))
-    .addNumberOption(opt => opt.setName('prix-original').setDescription('Prix original (€)').setRequired(true))
-    .addNumberOption(opt => opt.setName('prix-promo').setDescription('Prix en promo (€)').setRequired(true))
-    .addStringOption(opt => opt.setName('date-fin').setDescription('Date de fin (format: YYYY-MM-DD HH:mm)').setRequired(true)),
-
-  // MODIFIER JEU
-  new SlashCommandBuilder()
-    .setName('modifier-jeu')
-    .setDescription('Modifier un jeu existant')
-    .addIntegerOption(opt => opt.setName('id').setDescription('ID du jeu').setRequired(true))
-    .addStringOption(opt => opt.setName('champ').setDescription('Champ à modifier')
-      .addChoices(
-        { name: 'Titre', value: 'titre' },
-        { name: 'Description', value: 'description' },
-        { name: 'Image', value: 'image' },
-        { name: 'Lien', value: 'lien' },
-        { name: 'Statut', value: 'statut' }
-      ).setRequired(true))
-    .addStringOption(opt => opt.setName('valeur').setDescription('Nouvelle valeur').setRequired(true)),
-
-  // SUPPRIMER JEU
-  new SlashCommandBuilder()
-    .setName('supprimer-jeu')
-    .setDescription('Supprimer un jeu')
+    .setName('retirer')
+    .setDescription('Retirer un jeu')
     .addIntegerOption(opt => opt.setName('id').setDescription('ID du jeu').setRequired(true)),
 
   // LISTE JEUX
   new SlashCommandBuilder()
-    .setName('liste-jeux')
-    .setDescription('Lister les derniers jeux ajoutés')
-    .addIntegerOption(opt => opt.setName('limite').setDescription('Nombre de jeux (max 10)').setRequired(false)),
+    .setName('liste')
+    .setDescription('Liste des derniers jeux')
+    .addIntegerOption(opt => opt.setName('limite').setDescription('Nombre (max 20)').setRequired(false)),
+
+  // DONNER AVIS
+  new SlashCommandBuilder()
+    .setName('avis')
+    .setDescription('Donner un avis sur un jeu')
+    .addIntegerOption(opt => opt.setName('id').setDescription('ID du jeu').setRequired(true))
+    .addIntegerOption(opt => opt.setName('histoire').setDescription('Note Histoire (1-5)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('gameplay').setDescription('Note Gameplay (1-5)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('graphismes').setDescription('Note Graphismes (1-5)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('musique').setDescription('Note Musique (1-5)').setRequired(true))
+    .addStringOption(opt => opt.setName('commentaire').setDescription('Commentaire (optionnel)').setRequired(false)),
 
   // STATS
   new SlashCommandBuilder()
     .setName('stats')
-    .setDescription('Statistiques de la plateforme'),
-
-  // TEST PARSER
-  new SlashCommandBuilder()
-    .setName('test-parser')
-    .setDescription('Tester le parser DraftBot sur le dernier message')
+    .setDescription('Statistiques de la plateforme')
 ];
 
 // ============================================
@@ -140,33 +103,26 @@ client.on('interactionCreate', async interaction => {
 
   try {
     switch(commandName) {
-      case 'ajouter-jeu':
+      case 'ajouter':
         await handleAddGame(interaction);
         break;
-      case 'ajouter-promo':
-        await handleAddPromo(interaction);
-        break;
-      case 'modifier-jeu':
-        await handleEditGame(interaction);
-        break;
-      case 'supprimer-jeu':
+      case 'retirer':
         await handleDeleteGame(interaction);
         break;
-      case 'liste-jeux':
+      case 'liste':
         await handleListGames(interaction);
+        break;
+      case 'avis':
+        await handleAddReview(interaction);
         break;
       case 'stats':
         await handleStats(interaction);
         break;
-      case 'test-parser':
-        await handleTestParser(interaction);
-        break;
     }
   } catch (error) {
-    console.error('❌ Erreur commande générale:', error.message);
-    // Tente de récupérer un message d'erreur d'axios plus spécifique si possible
-    const detailedError = error.response?.data?.error || error.message || 'Une erreur inconnue est survenue.';
-    const reply = { content: `❌ Une erreur est survenue lors du traitement de la commande : ${detailedError}`, ephemeral: true };
+    console.error('❌ Erreur commande:', error.message);
+    const detailedError = error.response?.data?.error || error.message;
+    const reply = { content: `❌ Erreur: ${detailedError}`, ephemeral: true };
     
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply(reply);
@@ -201,7 +157,7 @@ async function handleAddGame(interaction) {
       .setThumbnail(gameData.image_url)
       .addFields(
         { name: '🎮 Titre', value: gameData.title, inline: true },
-        { name: '🏷️ ID', value: `#${response.data.data.id || 'N/A'}`, inline: true },
+        { name: '🏷️ ID', value: `#${response.data.data.id}`, inline: true },
         { name: '💻 Plateforme', value: gameData.platform, inline: true },
         { name: '🎯 Genre', value: gameData.genre, inline: true },
         { name: '⚡ Type', value: gameData.game_type === 'permanent' ? 'Gratuit permanent' : 'Gratuit temporaire', inline: true }
@@ -230,77 +186,110 @@ async function handleAddGame(interaction) {
       await notifChannel.send({ embeds: [notifEmbed] });
     }
   } catch (error) {
-    const apiError = error.response?.data?.error || error.message || 'Erreur API inconnue';
-    console.error('❌ Erreur API ajouter-jeu:', apiError);
-    await interaction.editReply({ content: `❌ Erreur lors de l'ajout du jeu : \`${apiError}\``, ephemeral: true });
+    const apiError = error.response?.data?.error || error.message;
+    console.error('❌ Erreur API:', apiError);
+    await interaction.editReply({ content: `❌ Erreur: \`${apiError}\``, ephemeral: true });
   }
 }
 
-async function handleAddPromo(interaction) {
-  await interaction.deferReply();
+async function handleDeleteGame(interaction) {
+  await interaction.deferReply({ ephemeral: true });
 
-  const promoData = {
-    title: interaction.options.getString('titre'),
-    image_url: interaction.options.getString('image'),
-    promo_url: interaction.options.getString('lien'),
-    store: interaction.options.getString('store'),
-    original_price: interaction.options.getNumber('prix-original'),
-    discount_price: interaction.options.getNumber('prix-promo'),
-    end_date: interaction.options.getString('date-fin')
-  };
-
-  const discount = Math.round(((promoData.original_price - promoData.discount_price) / promoData.original_price) * 100);
-  promoData.discount_percentage = discount;
+  const gameId = interaction.options.getInteger('id');
 
   try {
-    const response = await axios.post(`${API_URL}/promotions`, promoData, {
+    await axios.delete(`${API_URL}/games/${gameId}`, {
       headers: { 'X-API-Key': API_KEY }
     });
 
     const embed = new EmbedBuilder()
-      .setColor('#f59e0b')
-      .setTitle('✅ Promotion ajoutée !')
-      .setThumbnail(promoData.image_url)
-      .addFields(
-        { name: '🎮 Jeu', value: promoData.title, inline: true },
-        { name: '🏪 Store', value: promoData.store, inline: true },
-        { name: '💰 Prix', value: `~~${promoData.original_price}€~~ → **${promoData.discount_price}€**`, inline: true },
-        { name: '🔥 Réduction', value: `-${discount}%`, inline: true },
-        { name: '⏰ Fin', value: promoData.end_date, inline: true }
-      )
+      .setColor('#ef4444')
+      .setTitle('✅ Jeu supprimé')
+      .setDescription(`Le jeu #${gameId} a été supprimé avec succès.`)
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    const apiError = error.response?.data?.error || error.message || 'Erreur API inconnue';
-    console.error('❌ Erreur API ajouter-promo:', apiError);
-    await interaction.editReply({ content: `❌ Erreur lors de l'ajout de la promotion : \`${apiError}\``, ephemeral: true });
+    const apiError = error.response?.data?.error || error.message;
+    await interaction.editReply({ content: `❌ Erreur: \`${apiError}\`` });
   }
 }
 
 async function handleListGames(interaction) {
   await interaction.deferReply();
 
-  const limit = interaction.options.getInteger('limite') || 5;
+  const limit = Math.min(interaction.options.getInteger('limite') || 10, 20);
+  
   try {
-    const response = await axios.get(`${API_URL}/games?limit=${limit}`, {
-      headers: { 'X-API-Key': API_KEY }
-    });
+    const response = await axios.get(`${API_URL}/games?limit=${limit}`);
+    const games = response.data.data || [];
 
-    const games = response.data.data || response.data.games || response.data; // Adapter à la structure de réponse
     const embed = new EmbedBuilder()
       .setColor('#3b82f6')
       .setTitle(`📋 Derniers jeux ajoutés (${games.length})`)
       .setDescription(
-        games.map(g => `**#${g.id}** - ${g.title} (${g.platform})`).join('\n')
+        games.map(g => `**#${g.id}** - ${g.title} (${g.platform}) - ⭐ ${g.average_rating}`).join('\n')
       )
+      .setFooter({ text: `Utilisez /avis [id] pour noter un jeu` })
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    const apiError = error.response?.data?.error || error.message || 'Erreur API inconnue';
-    console.error('❌ Erreur API liste-jeux:', apiError);
-    await interaction.editReply({ content: `❌ Erreur lors de la récupération des jeux : \`${apiError}\``, ephemeral: true });
+    const apiError = error.response?.data?.error || error.message;
+    await interaction.editReply({ content: `❌ Erreur: \`${apiError}\`` });
+  }
+}
+
+async function handleAddReview(interaction) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const gameId = interaction.options.getInteger('id');
+  const story = interaction.options.getInteger('histoire');
+  const gameplay = interaction.options.getInteger('gameplay');
+  const graphics = interaction.options.getInteger('graphismes');
+  const soundtrack = interaction.options.getInteger('musique');
+  const comment = interaction.options.getString('commentaire');
+
+  // Validation
+  if ([story, gameplay, graphics, soundtrack].some(v => v < 1 || v > 5)) {
+    await interaction.editReply({ content: '❌ Les notes doivent être entre 1 et 5.' });
+    return;
+  }
+
+  try {
+    const ratingData = {
+      game_id: gameId,
+      user_id: interaction.user.id,
+      story_rating: story,
+      gameplay_rating: gameplay,
+      graphics_rating: graphics,
+      soundtrack_rating: soundtrack,
+      review_text: comment || null
+    };
+
+    await axios.post(`${API_URL}/ratings`, ratingData, {
+      headers: { 'X-API-Key': API_KEY }
+    });
+
+    const average = ((story + gameplay + graphics + soundtrack) / 4).toFixed(1);
+
+    const embed = new EmbedBuilder()
+      .setColor('#fbbf24')
+      .setTitle('✅ Avis enregistré !')
+      .addFields(
+        { name: '📖 Histoire', value: `${story}⭐`, inline: true },
+        { name: '🎮 Gameplay', value: `${gameplay}⭐`, inline: true },
+        { name: '🎨 Graphismes', value: `${graphics}⭐`, inline: true },
+        { name: '🎵 Musique', value: `${soundtrack}⭐`, inline: true },
+        { name: '📊 Moyenne', value: `${average}/5` }
+      )
+      .setFooter({ text: 'Merci pour votre avis !' })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    const apiError = error.response?.data?.error || error.message;
+    await interaction.editReply({ content: `❌ Erreur: \`${apiError}\`` });
   }
 }
 
@@ -308,81 +297,26 @@ async function handleStats(interaction) {
   await interaction.deferReply();
 
   try {
-    const response = await axios.get(`${API_URL}/stats`, {
-      headers: { 'X-API-Key': API_KEY }
-    });
+    const response = await axios.get(`${API_URL}/stats`);
+    const stats = response.data.data || {};
 
-    const stats = response.data.data || response.data; // Adapter à la structure de réponse
     const embed = new EmbedBuilder()
       .setColor('#8b5cf6')
       .setTitle('📊 Statistiques ZeroPrice')
       .addFields(
         { name: '🎮 Jeux totaux', value: String(stats.total_games || 0), inline: true },
-        { name: '🆓 Jeux gratuits actifs', value: String(stats.free_games || 0), inline: true },
-        { name: '🔥 Promotions actives', value: String(stats.active_promos || 0), inline: true },
-        { name: '👥 Utilisateurs inscrits', value: String(stats.total_users || 0), inline: true },
-        { name: '⭐ Notes moyennes', value: String(stats.avg_rating || 'N/A'), inline: true },
-        { name: '💬 Commentaires', value: String(stats.total_comments || 0), inline: true }
+        { name: '🆓 Jeux gratuits', value: String(stats.free_games || 0), inline: true },
+        { name: '🔥 Promos actives', value: String(stats.active_promos || 0), inline: true },
+        { name: '👥 Utilisateurs', value: String(stats.total_users || 0), inline: true },
+        { name: '⭐ Note moyenne', value: String(stats.avg_rating || 'N/A'), inline: true },
+        { name: '💬 Avis', value: String(stats.total_ratings || 0), inline: true }
       )
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    const apiError = error.response?.data?.error || error.message || 'Erreur API inconnue';
-    console.error('❌ Erreur API stats:', apiError);
-    await interaction.editReply({ content: `❌ Erreur lors de la récupération des stats : \`${apiError}\``, ephemeral: true });
-  }
-}
-
-async function handleEditGame(interaction) {
-  await interaction.reply({ content: '⚠️ Fonction en cours de développement', ephemeral: true });
-}
-
-async function handleDeleteGame(interaction) {
-  await interaction.reply({ content: '⚠️ Fonction en cours de développement', ephemeral: true });
-}
-
-async function handleTestParser(interaction) {
-  await interaction.deferReply({ ephemeral: true });
-
-  const channel = client.channels.cache.get(DRAFTBOT_CHANNEL_ID);
-  if (!channel) {
-    return interaction.editReply('❌ Salon DraftBot introuvable');
-  }
-
-  try {
-    const messages = await channel.messages.fetch({ limit: 20 });
-    const draftbotMsg = messages.find(m => m.author.id === DRAFTBOT_ID);
-
-    if (!draftbotMsg) {
-      return interaction.editReply('❌ Aucun message DraftBot trouvé dans les 20 derniers messages');
-    }
-
-    const parsed = parseDraftBotMessage(draftbotMsg);
-
-    if (!parsed) {
-      return interaction.editReply('❌ Impossible de parser le message');
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor('#3b82f6')
-      .setTitle('🧪 Résultat du Parser')
-      .addFields(
-        { name: '🎮 Titre', value: parsed.title, inline: false },
-        { name: '🏪 Store', value: parsed.store, inline: true },
-        { name: '💻 Plateforme', value: parsed.platform, inline: true },
-        { name: '🎯 Genre', value: parsed.genre, inline: true },
-        { name: '⏰ Gratuit jusqu\'au', value: parsed.free_until || 'Permanent', inline: false },
-        { name: '📝 Description', value: (parsed.description?.slice(0, 200) || 'N/A') + (parsed.description && parsed.description.length > 200 ? '...' : ''), inline: false },
-        { name: '🔗 URL', value: parsed.game_url || 'N/A', inline: false }
-      )
-      .setImage(parsed.image_url)
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [embed] });
-  } catch (error) {
-    console.error('❌ Erreur test-parser:', error);
-    await interaction.editReply({ content: '❌ Erreur lors de l\'exécution du test-parser.', ephemeral: true });
+    const apiError = error.response?.data?.error || error.message;
+    await interaction.editReply({ content: `❌ Erreur: \`${apiError}\`` });
   }
 }
 
@@ -391,10 +325,7 @@ async function handleTestParser(interaction) {
 // ============================================
 
 client.on('messageCreate', async message => {
-  // Ignorer si ce n'est pas le salon configuré
   if (message.channel.id !== DRAFTBOT_CHANNEL_ID) return;
-  
-  // Ignorer si ce n'est pas DraftBot
   if (message.author.id !== DRAFTBOT_ID) return;
 
   console.log('📨 Message DraftBot détecté !');
@@ -403,31 +334,30 @@ client.on('messageCreate', async message => {
     const gameData = parseDraftBotMessage(message);
     
     if (!gameData || !gameData.title) {
-      console.log('⚠️ Impossible de parser le message ou titre manquant.');
+      console.log('⚠️ Impossible de parser le message.');
       return;
     }
 
     console.log('🎯 Données parsées:', gameData.title);
 
-    // Vérifier si le jeu existe déjà
+    // Vérifier si le jeu existe
     const checkResponse = await axios.get(`${API_URL}/games/check-exists`, {
       params: { title: gameData.title },
       headers: { 'X-API-Key': API_KEY }
     });
 
-    if (checkResponse.data.exists) {
+    if (checkResponse.data.data.exists) {
       console.log(`ℹ️ Jeu déjà existant: ${gameData.title}`);
       return;
     }
 
-    // Ajouter le jeu automatiquement
+    // Ajouter automatiquement
     const response = await axios.post(`${API_URL}/games/auto-add`, gameData, {
       headers: { 'X-API-Key': API_KEY }
     });
 
-    const addedGameId = response.data.data?.id || response.data.id || 'N/A';
-
-    console.log(`✅ Jeu ajouté automatiquement: ${gameData.title} (ID: ${addedGameId})`);
+    const gameId = response.data.data?.id || 'N/A';
+    console.log(`✅ Jeu ajouté: ${gameData.title} (ID: ${gameId})`);
 
     // Notification
     const notifChannel = client.channels.cache.get(NOTIF_CHANNEL_ID);
@@ -438,7 +368,7 @@ client.on('messageCreate', async message => {
         .setDescription(`Ajouté automatiquement depuis DraftBot`)
         .setImage(gameData.image_url)
         .addFields(
-          { name: '🏪 Store', value: gameData.store, inline: true },
+          { name: '🪟 Store', value: gameData.store, inline: true },
           { name: '💻 Plateforme', value: gameData.platform, inline: true },
           { name: '⏰ Jusqu\'au', value: gameData.free_until || 'N/A', inline: true }
         )
@@ -449,8 +379,8 @@ client.on('messageCreate', async message => {
     }
 
   } catch (error) {
-    const apiError = error.response?.data?.error || error.message || 'Erreur API inconnue';
-    console.error('❌ Erreur auto-ajout DraftBot:', apiError);
+    const apiError = error.response?.data?.error || error.message;
+    console.error('❌ Erreur auto-ajout:', apiError);
   }
 });
 
@@ -476,16 +406,14 @@ function parseDraftBotMessage(message) {
   };
 
   // EPIC GAMES
-  if (content.includes('Epic Games Store') || content.includes('Epic Games')) {
+  if (content.includes('Epic Games')) {
     const titleMatch = content.match(/\*\*(.*?)\*\*/);
     if (titleMatch) {
       gameData.title = titleMatch[1].trim();
     }
 
     if (!gameData.title && embeds[0]?.title) {
-      gameData.title = embeds[0].title
-        .replace(/gratuit sur l'Epic Games Store !?/i, '')
-        .trim();
+      gameData.title = embeds[0].title.replace(/gratuit sur l'Epic Games Store !?/i, '').trim();
     }
 
     const dateMatch = content.match(/jusqu'au (\d{2}\/\d{2}\/\d{4})/);
@@ -493,11 +421,9 @@ function parseDraftBotMessage(message) {
       const [day, month, year] = dateMatch[1].split('/');
       gameData.free_until = `${year}-${month}-${day} 23:59:59`;
     } else {
-      // Estimation (basé sur l'hypothèse de la gratuité d'une semaine d'EGS)
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 7); 
+      endDate.setDate(endDate.getDate() + 7);
       gameData.free_until = endDate.toISOString().slice(0, 19).replace('T', ' ');
-      console.log(`⚠️ Date de fin estimée à +7 jours pour ${gameData.title}`);
     }
 
     gameData.store = 'Epic Games';
@@ -515,29 +441,7 @@ function parseDraftBotMessage(message) {
     if (content.includes('définitivement') || content.includes('permanent')) {
       gameData.game_type = 'permanent';
       gameData.free_until = null;
-    } else {
-      // Estimation de 3 jours si la date n'est pas spécifiée (risque)
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 3);
-      gameData.free_until = endDate.toISOString().slice(0, 19).replace('T', ' ');
-      console.log(`⚠️ Date de fin estimée à +3 jours pour ${gameData.title}`);
     }
-  }
-
-  // GOG
-  else if (content.includes('GOG')) {
-    const titleMatch = content.match(/\*\*(.*?)\*\*/);
-    if (titleMatch) {
-      gameData.title = titleMatch[1].trim();
-    }
-
-    gameData.store = 'GOG';
-    
-    // Estimation de 2 jours (risque)
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 2);
-    gameData.free_until = endDate.toISOString().slice(0, 19).replace('T', ' ');
-    console.log(`⚠️ Date de fin estimée à +2 jours pour ${gameData.title}`);
   }
 
   // EXTRAIRE DEPUIS EMBEDS
@@ -545,10 +449,7 @@ function parseDraftBotMessage(message) {
     const embed = embeds[0];
 
     if (embed.description) {
-      // Supprimer les liens Markdown pour garder une description propre
-      gameData.description = embed.description
-        .replace(/\[.*?\]\(.*?\)/g, '') 
-        .slice(0, 500);
+      gameData.description = embed.description.replace(/\[.*?\]\(.*?\)/g, '').slice(0, 500);
     }
 
     if (embed.image?.url) {
@@ -560,20 +461,9 @@ function parseDraftBotMessage(message) {
     if (embed.url) {
       gameData.game_url = embed.url;
     }
-
-    if (embed.fields) {
-      embed.fields.forEach(field => {
-        if (field.name.toLowerCase().includes('genre')) {
-          gameData.genre = field.value;
-        }
-        if (field.name.toLowerCase().includes('plateforme')) {
-          gameData.platform = field.value;
-        }
-      });
-    }
   }
 
-  // CHERCHER LIEN FINAL
+  // LIEN
   const linkMatch = content.match(/https?:\/\/[^\s)]+/);
   if (linkMatch && !gameData.game_url) {
     gameData.game_url = linkMatch[0];
@@ -591,37 +481,32 @@ function parseDraftBotMessage(message) {
 // ============================================
 
 client.once('ready', async () => {
-  console.log(`✅ Bot ZeroPrice connecté : ${client.user.tag}`);
-  console.log(`👂 Écoute du salon DraftBot: ${DRAFTBOT_CHANNEL_ID}`);
-  console.log(`📢 Notifications dans: ${NOTIF_CHANNEL_ID}`);
+  console.log(`✅ Bot connecté: ${client.user.tag}`);
+  console.log(`👂 Écoute DraftBot: ${DRAFTBOT_CHANNEL_ID}`);
+  console.log(`📢 Notifications: ${NOTIF_CHANNEL_ID}`);
 
   const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
   
   try {
-    console.log('🔄 Enregistrement des commandes slash...');
-    // S'assurer que CLIENT_ID est défini
+    console.log('🔄 Enregistrement commandes...');
     if (CLIENT_ID) {
       await rest.put(
         Routes.applicationCommands(CLIENT_ID),
         { body: commands }
       );
-      console.log('✅ Commandes slash enregistrées !');
-    } else {
-      console.error('❌ DISCORD_CLIENT_ID non défini. Les commandes slash ne seront pas enregistrées.');
+      console.log('✅ Commandes enregistrées !');
     }
   } catch (error) {
-    console.error('❌ Erreur enregistrement commandes:', error);
+    console.error('❌ Erreur commandes:', error);
   }
 });
 
-// Gestion des erreurs
 client.on('error', error => {
   console.error('❌ Erreur Discord:', error);
 });
 
-// Gère l'erreur "Used disallowed intents" si le paramètre n'est pas réglé sur Discord
 process.on('unhandledRejection', error => {
-  console.error('❌ Unhandled promise rejection:', error);
+  console.error('❌ Unhandled rejection:', error);
 });
 
 client.login(DISCORD_TOKEN);
