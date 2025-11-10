@@ -7,8 +7,8 @@
     "node": ">=18.x"
   },
   "scripts": {
-    "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "start": "NODE_ENV=production node bot.js",
+    "dev": "NODE_ENV=development nodemon bot.js"
   },
   "keywords": [
     "discord",
